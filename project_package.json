@@ -1,0 +1,25 @@
+{
+  "name": "dynamic-system",
+  "private": true,
+  "main": "app/server",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start-dev": "nodemon .",
+    "start": "node ."
+  },
+  "description": "Basic ExpressJS API",
+  "dependencies": {
+    "body-parser": "^1.15.0",
+    "cookie-parser": "^1.4.1",
+    "express": "^4.13.4",
+    "file-stream-rotator": "0.0.6",
+    "helmet": "^1.3.0",
+    "mongoose": "^4.4.12",
+    "morgan": "^1.7.0",
+    "request-ip": "^1.2.2",
+    "speakeasy": "^2.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^1.9.1"
+  }
+}

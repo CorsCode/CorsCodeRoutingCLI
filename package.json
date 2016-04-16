@@ -1,0 +1,22 @@
+{
+  "name": "corscode-dynamic-api",
+  "version": "0.1.0",
+  "description": "Command-line tool for creating a dynamic API",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "CorsCode",
+  "license": "Apache-2.0",
+  "preferGlobal": true,
+  "bin": {
+    "corscode-init": "index.js"
+  },
+  "dependencies": {
+    "chalk": "^1.1.3",
+    "co": "^4.6.0",
+    "co-prompt": "^1.0.0",
+    "commander": "^2.9.0",
+    "ncp": "^2.0.0",
+    "underscore": "^1.8.3"
+  }
+}
