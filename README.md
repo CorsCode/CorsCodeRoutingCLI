@@ -9,10 +9,9 @@ That sounds like a mouthful, but this tool is extremely useful for creating simp
 - __ABLE TO FOLLOW PROMPTS__
 
 #### Usage:
-- Currently __NOT__ on npm
 - Install:
 ```
-npm install -g corscode-routing-cli
+npm install -g corscode-dynamic-api
 ```
 - Run:
 ```
