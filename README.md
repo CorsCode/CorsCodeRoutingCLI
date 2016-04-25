@@ -18,3 +18,11 @@ npm install -g corscode-dynamic-api
 corscode-init
 ```
 - Follow steps, wait for script to finish, and enjoy!
+
+## Update Log
+- v0.1.0
+    - Initial release
+- v0.1.1
+    - Fixed minor bug that prevented dependencies from installing properly
+- v0.2.0
+    - Interface updated for easier use
