@@ -1,6 +1,6 @@
 # CorsCode Dynamic API Command-line Interface
 
-That sounds like a mouthful, but this tool is extremely useful for creating simple APIs that utilize 2-step authentication as the primary form of authentication.
+That sounds like a mouthful, but this tool is extremely useful for creating simple APIs that utilize token authentication.
 
 #### Requirements:
 - NPM
@@ -13,11 +13,11 @@ That sounds like a mouthful, but this tool is extremely useful for creating simp
 ```
 npm install -g corscode-dynamic-api
 ```
-- Run:
+- Run in folder of new project:
 ```
 corscode-init
 ```
-- Follow steps, wait for script to finish, and enjoy!
+- Follow steps, wait for script to finish, and enjoy a pre-built API!
 
 ## Update Log
 - v0.1.0
@@ -26,3 +26,9 @@ corscode-init
     - Fixed minor bug that prevented dependencies from installing properly
 - v0.2.0
     - Interface updated for easier use
+- v1.0.0
+	- Updated the entire router to utilize Promises
+	- Removed previous authentication due to faults
+	- Now utilizing token authentication
+	- Enhanced useability
+	- Cleaner code, more user friendly

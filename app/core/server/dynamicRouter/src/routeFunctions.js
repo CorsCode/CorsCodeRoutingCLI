@@ -13,10 +13,6 @@ module.exports = {
 	 *
 	 * @return Array
 	 * ------ EXAMPLE: [ , "users", , ":user_id", , "posts", , ":post_id", , "comments", , ":comment_id" ]
-	 *
-	 *
-	 * NOTE:
-	 * This function will have to be called again to clear undefined values.
 	 */
 	cleanArray: function(arr, deleteValue) {
 		var i;
@@ -42,7 +38,7 @@ module.exports = {
 	deferRequest: function(url) {
 		var sep = this.cleanArray(url.split('/'), '');
 		sep = this.cleanArray(sep, undefined);
-
+		
 		return sep;
 	},
 	/**
@@ -89,26 +85,32 @@ module.exports = {
 	 *					 				  "/restaurants/:restaurant_id/food/:food_id/reviews/:review_id" ] }
 	 */
 	expandRoutes: function(routes) {
-		var newRoutes = {};
+		var self = this;
 
-		var x;
-		for(x = 0;x < routes.length;x++) {
-			var sepRoutes = this.deferRequest(routes[x]);
-			var curRoute = '';
+		try {
+			var newRoutes = {};
 
-			var i;
-			for(i = 0;i < sepRoutes.length;i++) {
-				if(i === 0) {
-					curRoute = '/' + sepRoutes[i];
-					newRoutes[sepRoutes[i]] = ['/' + sepRoutes[i]];
-				} else {
-					curRoute += '/' + sepRoutes[i];
-					newRoutes[sepRoutes[0]].push(curRoute);
+			var x;
+			for(x = 0;x < routes.length;x++) {
+				var sepRoutes = self.deferRequest(routes[x]);
+				var curRoute = '';
+
+				var i;
+				for(i = 0;i < sepRoutes.length;i++) {
+					if(i === 0) {
+						curRoute = '/' + sepRoutes[i];
+						newRoutes[sepRoutes[i]] = ['/' + sepRoutes[i]];
+					} else {
+						curRoute += '/' + sepRoutes[i];
+						newRoutes[sepRoutes[0]].push(curRoute);
+					}
 				}
 			}
+		} catch(e) {
+			// Do nothing
+		} finally {
+			return newRoutes;
 		}
-
-		return newRoutes;
 	},
 	/**
 	 * This resource function ensures the route being called is valid.
@@ -183,7 +185,7 @@ module.exports = {
 				functions.push({ function: reqMethod.toLowerCase() + (sepUrl[i].charAt(0).toUpperCase() + sepUrl[i].slice(1)), param: individual });
 			}
 
-			return [ reqMethod, sepUrl, functions ];
+			return [ reqMethod, functions ];
 		} else {
 			return 'no route found';
 		}

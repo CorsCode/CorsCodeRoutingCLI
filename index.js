@@ -40,19 +40,19 @@ figlet('CorsCode CLI', function(err, data) {
 	console.log(chalk.green(data));
 
 	program
-		.version('0.2.0')
+		.version('0.3.0')
 		.option('-n, --app-name <name>', 'Name of application.')
 		.option('-m, --mongoose-connection <moncon>', 'Connection link to use for mongoose')
 		.option('-r, --routes <routes>', 'List of lowest hierarchal routes (EX: "/users/:user_id/posts/:post_id/comments"). Use comma to separate.', list)
-		.option('-a, --authentication-link <authlink>', 'Link to be used for authentication purposes')
+		.option('-a, --authentication-var <authlink>', 'Variable to be used for authentication purposes')
 		.parse(process.argv);
 
 	co(function *() {
 		var appName = (!program.appName ? yield prompt(chalk.cyan('-') + chalk.yellow(' Enter name of application: ')) : program.appName),
 			mongooseConnection = (!program.mongooseConnection ? yield prompt(chalk.cyan('-') + chalk.yellow(' Mongoose Connection link: ')) : program.mongooseConnection),
 			routes = (!program.routes ? list(yield prompt(chalk.cyan('-') + chalk.yellow(' Routes (EX: "/users/:user_id/posts/:post_id/comments"), separate by commas: '))) : program.routes),
-			authenticationLink = (!program.authenticationLink ? yield prompt(chalk.cyan('-') + chalk.yellow(' Link to be used for authentication purposes (EX: "/users"): ')) : program.authenticationLink);
-
+			authenticationVar = (!program.authenticationVar ? yield prompt(chalk.cyan('-') + chalk.yellow(' Variable to be used for authentication purposes (EX: "users"): ')) : program.authenticationVar);
+	
 		fs.readFile(path.resolve(cli_location + '/project_package.json'), 'utf-8', function(error, data) {
 			if(error) return console.log(error);
 
@@ -61,7 +61,7 @@ figlet('CorsCode CLI', function(err, data) {
 			data.name = appName.toLowerCase();
 			data.mongoose_connection = mongooseConnection;
 			data.routes = routes;
-			data.authentication_link = authenticationLink;
+			data.authenticationVar = authenticationVar;
 
 			fs.writeFile(path.resolve('./package.json'), JSON.stringify(data, null, 2), 'utf-8', function(error) {
 				if(error) return console.log(error);
@@ -71,19 +71,18 @@ figlet('CorsCode CLI', function(err, data) {
 				/**
 				 * Add Dynamic Routing API to project
 				 */
-				ncp(path.resolve(cli_location + '/app'), path.resolve('./app'), function(error) {
+				ncp(path.resolve(cli_location + '/app'), path.resolve('./'), function(error) {
 					if(error) return console.log(error);
 
 					console.log(chalk.green('Dynamic Routing API added!'));
 
+					var dataHooks = [];
+
 					_.map(routes, function(route) {
-						var sep_route = route.split('/');
-
-						var models = _.filter(sep_route, function(ind_route) {
-							return ind_route !== '' && (ind_route.indexOf(':') === -1);
-						});
-
-						var dataHooks = [];
+						var sep_route = route.split('/'),
+							models = _.filter(sep_route, function(ind_route) {
+								return ind_route !== '' && (ind_route.indexOf(':') === -1);
+							});
 
 						_.map(models, function(model) {
 							// Modify model name to MODEL.model.js
@@ -98,22 +97,22 @@ figlet('CorsCode CLI', function(err, data) {
 							/**
 							 * Model Content
 							 */
-							var modelContent = 'module.exports = function(mongoose) {\n';
+							var modelContent = '';
+							if(authenticationVar === model) {
+								modelContent += 'var bcrypt = require("bcryptjs");\n\n';
+							}
+
+							modelContent += 'module.exports = function(mongoose) {\n';
 
 							// Schema
 							modelContent += '\tvar Schema = new mongoose.Schema({\n';
-							if(authenticationLink.substring(1) === model) {
-								modelContent += '\t\temail: String,\n';
-								modelContent += '\t\tpublicAccessToken: String,\n';
-								modelContent += '\t\tsecret: String,\n';
-								modelContent += '\t\tipAddr: String,\n';
-								modelContent += '\t\texpires: { type: Boolean, default: true },\n';
+							if(authenticationVar === model) {
+								modelContent += '\t\tusername: String,\n';
+								modelContent += '\t\tpassword: String,\n';
 							} else {
-								if(authenticationLink) {
-									modelContent += '\t\tcreatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },\n';
-								}
+								modelContent += '\t\tcreatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },\n';
 							}
-							
+
 							var nextModel,
 								prevModel;
 
@@ -140,7 +139,22 @@ figlet('CorsCode CLI', function(err, data) {
 								modelContent += '\t\t' + models[models.indexOf(model) + 1] + ': [ { type: mongoose.Schema.Types.ObjectId, ref: "' + nextModel + '" } ]\n';
 							}
 
-							modelContent += '\t});\n';
+							modelContent += '\t});\n\n';
+
+							// Pre-save
+							if(authenticationVar === model) {
+								modelContent += '\tSchema.pre("save", function(next) {\n';
+
+								modelContent += '\t\tvar data = this;\n';
+								modelContent += '\t\tif(!data.isModified("password")) return next();\n\n';
+								modelContent += '\t\tbcrypt.genSalt(10, function(err, salt) {\n';
+								modelContent += '\t\t\tif(err) return next(err);\n\n';
+								modelContent += '\t\t\tbcrypt.hash(data.password, salt, function(err, hash) {\n';
+								modelContent += '\t\t\t\tif(err) return next(err);\n\n';
+								modelContent += '\t\t\t\tdata.password = hash;\n\n';
+								modelContent += '\t\t\t\tnext();\n';
+								modelContent += '\t\t\t});\n\t\t});\n\t});\n\n';
+							}
 
 							// Pre-remove
 							modelContent += '\tSchema.pre("remove", function(next) {\n';
@@ -196,44 +210,44 @@ figlet('CorsCode CLI', function(err, data) {
 								modelContent += '\t\t});\n';
 							}
 
-							modelContent += '\t\tnext();\n\t});\n';
+							modelContent += '\t\tnext();\n\t});\n\n';
 
 							modelContent += '\treturn mongoose.model("' + mongooseModel + '", Schema);\n};\n';
 
-							fs.writeFileSync(path.resolve('./app/models/' + modelName), modelContent);
+							fs.writeFileSync(path.resolve('./core/models/' + modelName), modelContent);
 
 							var returnData = {};
 							returnData[model] = modelName;
 							dataHooks.push(returnData);
 						});
+					});
 
-						// Create hooks after models are made
-						var hooks = 'module.exports = function(mongoose) {\n\treturn {\n';
-						_.map(dataHooks, function(hook) {
-							hooks += '\t\t' + Object.keys(hook)[0] + ': require("./' + hook[Object.keys(hook)[0]] + '")(mongoose)';
-							if(dataHooks.indexOf(hook) === dataHooks.length - 1) hooks += '\n';
-							else hooks += ',\n';
-						});
-						hooks += '\t};\n};\n';
+					// Create hooks after models are made
+					var hooks = 'module.exports = function(mongoose) {\n\treturn {\n';
+					_.map(dataHooks, function(hook) {
+						hooks += '\t\t' + Object.keys(hook)[0] + ': require("./' + hook[Object.keys(hook)[0]] + '")(mongoose)';
+						if(dataHooks.indexOf(hook) === dataHooks.length - 1) hooks += '\n';
+						else hooks += ',\n';
+					});
+					hooks += '\t};\n};\n';
 
-						fs.writeFile(path.resolve('./app/models/hooks.js'), hooks, 'utf-8', function(error) {
+					fs.writeFile(path.resolve('./core/models/hooks.js'), hooks, 'utf-8', function(error) {
+						if(error) return console.log(error);
+
+						console.log(chalk.green('Models and data hooks added!'));
+
+						/**
+						 * Run npm install for project
+						 */
+						console.log(chalk.yellow('Installing dependencies...'));
+						exec('npm install', function(error, stdout, stderr) {
 							if(error) return console.log(error);
 
-							console.log(chalk.green('Models and data hooks added!'));
+							console.log(stdout);
 
-							/**
-							 * Run npm install for project
-							 */
-							console.log(chalk.yellow('Installing dependencies...'));
-							exec('npm install', function(error, stdout, stderr) {
-								if(error) return console.log(error);
+							console.log(chalk.green('Dependencies installed!'));
 
-								console.log(stdout);
-
-								console.log(chalk.green('Dependencies installed!'));
-
-								process.exit();
-							});
+							process.exit();
 						});
 					});
 				});
