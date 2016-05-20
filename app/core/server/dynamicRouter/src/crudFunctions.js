@@ -23,15 +23,18 @@ CRUDFunctions.prototype.getFunction = function(curKey, x) {
 			self.dataHooks[dataVar].find(findData, function(err, data) {
 				if(err) return cb(err);
 
+				var temp = {};
 				if(ids[x] !== '') {
-					cb(data[0]);
+					temp[dataVar] = data[0];
 				} else {
-					cb(data);
+					temp[dataVar] = data;
 				}
+				cb(temp);
 			});
 		} else {
 			if(ids[x - 1] !== '' && typeof ids[x] !== 'undefined') {
-				var findData = {};
+				var findData = {},
+					temp = {};
 				var prevId = self.dataVars[curKey][x - 1].slice(0, (self.dataVars[curKey][x - 1].substring(self.dataVars[curKey][x - 1].length - 1) === 's' ? self.dataVars[curKey][x - 1].length - 1 : self.dataVars[curKey][x - 1].length)) + 'Id';
 
 				if(ids[x] === '') {
@@ -52,7 +55,8 @@ CRUDFunctions.prototype.getFunction = function(curKey, x) {
 						.exec(function(err, data) {
 							if(err) return cb(err);
 
-							cb(data);
+							temp[dataVar] = data;
+							cb(temp);
 						});
 				} else {
 					findData['_id'] = ids[x];
@@ -62,7 +66,8 @@ CRUDFunctions.prototype.getFunction = function(curKey, x) {
 						.exec(function(err, data) {
 							if(err) return cb(err);
 
-							cb(data[0]);
+							temp[dataVar] = data[0];
+							cb(temp);
 						});
 				}
 			} else {
@@ -99,9 +104,9 @@ CRUDFunctions.prototype.postFunction = function(curKey, x) {
 				var prevId = self.dataVars[curKey][x - 1].slice(0, (self.dataVars[curKey][x - 1].substring(self.dataVars[curKey][x - 1].length - 1) === 's' ? self.dataVars[curKey][x - 1].length - 1 : self.dataVars[curKey][x - 1].length)) + 'Id';
 
 				self.getFunction(curKey, x - 1)(ids, authenticationVar, authenticationId, body, function(data) {
-					body[prevId] = data._id;
-					var prevData = data;
-					
+					body[prevId] = data[curKey]._id;
+					var prevData = data[curKey];
+
 					var i;
 					for(i = 0;i < Object.keys(body).length;i++) {
 						newData[Object.keys(body)[i]] = body[Object.keys(body)[i]];

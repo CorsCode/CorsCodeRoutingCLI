@@ -20,20 +20,21 @@ function init(app, options) {
 		authenticationModel = options.dataHooks[authenticationVar],
 		authenticator = new Authenticator(authenticationModel, app.get('superSecret'));
 
-	if(options.routers.api) {
-		var apiRouter = express.Router();
+	var routingSetup = new routing(options.dataHooks);
 
-		var apiRoutingSetup = new routing(options.dataHooks);
+	/**
+	 * This function call is expanding the routes given into an object that contains arrays
+	 * - Each of these arrays holds the heirarchy of each route provided by the user
+	 * - Bypass option: Pass in pre-defined routes in the above constructor
+	 */
+	logger.debug("Defining routes");
+	routingSetup.getDefinedRoutes(options.routes);
 
-		/**
-		 * This function call is expanding the routes given into an object that contains arrays
-		 * - Each of these arrays holds the heirarchy of each route provided by the user
-		 * - Bypass option: Pass in pre-defined routes in the above constructor
-		 */
-		logger.debug("Defining routes");
-		apiRoutingSetup.getDefinedRoutes(options.routes);
-		logger.debug("Setting up middleware");
-		apiRoutingSetup.setupMiddleware(authenticator).then(function(middleware) {
+	logger.debug("Setting up middleware");
+	routingSetup.setupMiddleware(authenticator).then(function(middleware) {
+		if(options.routers.api) {
+			var apiRouter = express.Router();
+
 			apiRouter.use(middleware);
 
 			// Root API route (GET '/api/')
@@ -53,7 +54,7 @@ function init(app, options) {
 			});
 
 			apiRouter.all('*', function(req, res) {
-				apiRoutingSetup.enableRouter(req, authenticationVar, res.locals.customInfo, function(data) {
+				routingSetup.enableRouter(req, authenticationVar, res.locals.customInfo, function(data) {
 					if(typeof data.cookies !== 'undefined') {
 						var i;
 						for(i = 0;i < Object.keys(data.cookies).length;i++) {
@@ -67,22 +68,26 @@ function init(app, options) {
 
 			// Set basename for API
 			app.use('/api', apiRouter);
-		});
-	}
+		}
 
-	/*if(options.routers.admin) {
-		var adminRouter = express.Router();
+		/*if(options.routers.admin) {
+			var adminRouter = express.Router();
 
-		// Set basename for Admin
-		app.use('/admin', adminRouter);
-	}
+			adminRouter.use(middleware);
 
-	if(options.routers.app) {
-		var appRouter = express.Router();
+			// Set basename for Admin
+			app.use('/admin', adminRouter);
+		}
 
-		// Set basename for App
-		app.use('/', appRouter);
-	}*/
+		if(options.routers.app) {
+			var appRouter = express.Router();
+
+			appRouter.use(middleware);
+
+			// Set basename for App
+			app.use('/', appRouter);
+		}*/
+	});
 	
 	return app;
 }

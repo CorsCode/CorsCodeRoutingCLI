@@ -212,6 +212,14 @@ figlet('CorsCode CLI', function(err, data) {
 
 							modelContent += '\t\tnext();\n\t});\n\n';
 
+							if(authenticationVar === model) {
+								modelContent += '\tSchema.methods.comparePassword = function(candidatePassword, cb) {\n';
+								modelContent += '\t\tbcrypt.compare(candidatePassword, this.password, function(err, isMatch) {\n';
+								modelContent += '\t\t\tif(err) return cb(err);\n\n';
+								modelContent += '\t\t\tcb(null, isMatch);\n';
+								modelContent += '\t\t});\n});\n\n';
+							}
+
 							modelContent += '\treturn mongoose.model("' + mongooseModel + '", Schema);\n};\n';
 
 							fs.writeFileSync(path.resolve('./core/models/' + modelName), modelContent);

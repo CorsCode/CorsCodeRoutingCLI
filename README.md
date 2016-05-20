@@ -32,3 +32,7 @@ corscode-init
 	- Now utilizing token authentication
 	- Enhanced useability
 	- Cleaner code, more user friendly
+- v1.0.1
+	- Fixed some minor restrictive bugs in crudFunctions
+	- Added comparePassword method to authentication model
+	- Re-organized middleware setup
