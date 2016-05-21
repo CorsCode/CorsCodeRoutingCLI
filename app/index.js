@@ -3,7 +3,8 @@
 var express = require('express'),
 	parentApp = express();
 
-var core = require('./core');
+var Updater = require('./utils/updater'),
+	core = require('./core');
 
 /**
  * Default options:
@@ -13,8 +14,12 @@ var core = require('./core');
  *		authenticationVar: 'users'
  * }
  */
-core({
-	rootApp: parentApp
-}).then(function(server) {
-	server.start(parentApp);
+Updater.checkModels().then(function(done) {
+	if(done) {
+		core({
+			rootApp: parentApp
+		}).then(function(server) {
+			server.start(parentApp);
+		});
+	}
 });

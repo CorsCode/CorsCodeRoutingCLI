@@ -36,3 +36,6 @@ corscode-init
 	- Fixed some minor restrictive bugs in crudFunctions
 	- Added comparePassword method to authentication model
 	- Re-organized middleware setup
+- v1.1.0
+	- Removed model creation from CLI
+	- Added updater to routing system that replaces above removed
