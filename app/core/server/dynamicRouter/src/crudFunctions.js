@@ -51,7 +51,7 @@ CRUDFunctions.prototype.getFunction = function(curKey, x) {
 					}
 
 					self.dataHooks[self.dataVars[curKey][x - 1]].find(findData)
-						.populate(populateData)
+						//.populate(populateData)
 						.exec(function(err, data) {
 							if(err) return cb(err);
 
@@ -62,7 +62,7 @@ CRUDFunctions.prototype.getFunction = function(curKey, x) {
 					findData['_id'] = ids[x];
 
 					self.dataHooks[self.dataVars[curKey][x]].find(findData)
-						.populate(prevId)
+						//.populate(prevId)
 						.exec(function(err, data) {
 							if(err) return cb(err);
 
@@ -104,8 +104,8 @@ CRUDFunctions.prototype.postFunction = function(curKey, x) {
 				var prevId = self.dataVars[curKey][x - 1].slice(0, (self.dataVars[curKey][x - 1].substring(self.dataVars[curKey][x - 1].length - 1) === 's' ? self.dataVars[curKey][x - 1].length - 1 : self.dataVars[curKey][x - 1].length)) + 'Id';
 
 				self.getFunction(curKey, x - 1)(ids, authenticationVar, authenticationId, body, function(data) {
-					body[prevId] = data[curKey]._id;
-					var prevData = data[curKey];
+					body[prevId] = data[self.dataVars[curKey][x - 1]]._id;
+					var prevData = data[self.dataVars[curKey][x - 1]];
 
 					var i;
 					for(i = 0;i < Object.keys(body).length;i++) {
