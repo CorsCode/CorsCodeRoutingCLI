@@ -212,7 +212,7 @@ Updater.prototype.buildModel = function(models, model, fields) {
 
 	var i;
 	for(i = 0;i < Object.keys(fields).length;i++) {
-		modelContent += ',\n\t\t' + (fields[Object.keys(fields)[i]].field_main ? 'main_' : '') + Object.keys(fields)[i] + ': ' + fields[Object.keys(fields)[i]].field_type;
+		modelContent += ',\n\t\t' + Object.keys(fields)[i] + ': ' + (fields[Object.keys(fields)[i]].field_main ? '{ type: ' : '') + fields[Object.keys(fields)[i]].field_type + (fields[Object.keys(fields)[i]].field_main ? ', required: true }' : '');
 	}
 
 	modelContent += '\n\t});\n\n';

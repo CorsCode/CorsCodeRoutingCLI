@@ -43,3 +43,5 @@ corscode-init
 	- Fixed basic load error in crudFunctions (removed populate)
 - v1.2.0
 	- Fixed updater to prompt user for additional information
+- v1.2.1
+	- Changed main field for each model to be required instead of prefixed
