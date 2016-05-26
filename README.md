@@ -41,3 +41,5 @@ corscode-init
 	- Added updater to routing system that replaces above removed
 - v1.1.1
 	- Fixed basic load error in crudFunctions (removed populate)
+- v1.2.0
+	- Fixed updater to prompt user for additional information
