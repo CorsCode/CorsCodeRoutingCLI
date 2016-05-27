@@ -20,10 +20,12 @@ CRUDFunctions.prototype.getFunction = function(curKey, x) {
 				findData = { _id: ids[x] };
 			}
 
-			self.dataHooks[dataVar].find(findData, function(err, data) {
+			self.dataHooks[dataVar]['model'].find(findData, function(err, data) {
 				if(err) return cb(err);
 
-				var temp = {};
+				var temp = {
+					main_field: self.dataHooks[dataVar]['main_field']
+				};
 				if(ids[x] !== '') {
 					temp[dataVar] = data[0];
 				} else {
@@ -50,22 +52,24 @@ CRUDFunctions.prototype.getFunction = function(curKey, x) {
 						populateData = prevId + ' ' + self.dataVars[curKey][x];
 					}
 
-					self.dataHooks[self.dataVars[curKey][x - 1]].find(findData)
+					self.dataHooks[self.dataVars[curKey][x - 1]]['model'].find(findData)
 						//.populate(populateData)
 						.exec(function(err, data) {
 							if(err) return cb(err);
 
+							temp['main_field'] = self.dataHooks[self.dataVars[curKey][x - 1]]['main_field'];
 							temp[dataVar] = data;
 							cb(temp);
 						});
 				} else {
 					findData['_id'] = ids[x];
 
-					self.dataHooks[self.dataVars[curKey][x]].find(findData)
+					self.dataHooks[self.dataVars[curKey][x]]['model'].find(findData)
 						//.populate(prevId)
 						.exec(function(err, data) {
 							if(err) return cb(err);
 
+							temp['main_field'] = self.dataHooks[self.dataVars[curKey][x]]['main_field'];
 							temp[dataVar] = data[0];
 							cb(temp);
 						});
@@ -83,7 +87,7 @@ CRUDFunctions.prototype.postFunction = function(curKey, x) {
 
 	return function(ids, authenticationVar, authenticationId, body, cb) {
 		if(ids[x] === '') {
-			var newData = new self.dataHooks[dataVar]({
+			var newData = new self.dataHooks[dataVar]['model']({
 				'createdBy': authenticationId
 			});
 
@@ -104,8 +108,8 @@ CRUDFunctions.prototype.postFunction = function(curKey, x) {
 				var prevId = self.dataVars[curKey][x - 1].slice(0, (self.dataVars[curKey][x - 1].substring(self.dataVars[curKey][x - 1].length - 1) === 's' ? self.dataVars[curKey][x - 1].length - 1 : self.dataVars[curKey][x - 1].length)) + 'Id';
 
 				self.getFunction(curKey, x - 1)(ids, authenticationVar, authenticationId, body, function(data) {
-					body[prevId] = data[self.dataVars[curKey][x - 1]]._id;
-					var prevData = data[self.dataVars[curKey][x - 1]];
+					body[prevId] = data[curKey]._id;
+					var prevData = data[curKey];
 
 					var i;
 					for(i = 0;i < Object.keys(body).length;i++) {
@@ -137,11 +141,11 @@ CRUDFunctions.prototype.putFunction = function(curKey, x) {
 
 	return function(ids, authenticationVar, authenticationId, body, cb) {
 		if(ids[x] !== '') {
-			self.dataHooks[dataVar].findOne({ _id: ids[x] }, function(err, data) {
+			self.dataHooks[dataVar]['model'].findOne({ _id: ids[x] }, function(err, data) {
 				if(err) return cb(err);
 
 				if(authenticationId.toString() === data.createdBy.toString() || authenticationId.toString() === data._id.toString()) {
-					self.dataHooks[dataVar].update({ _id: ids[x] }, body, function(err, data) {
+					self.dataHooks[dataVar]['model'].update({ _id: ids[x] }, body, function(err, data) {
 						if(err) return cb(err);
 
 						self.getFunction(curKey, x)(ids, authenticationVar, authenticationId, body, function(data) {

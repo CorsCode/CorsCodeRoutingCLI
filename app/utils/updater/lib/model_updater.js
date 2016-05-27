@@ -8,6 +8,15 @@ var Promise = require('bluebird'),
 
 var project_package = require('../../../package.json');
 
+function exists(target) {
+	try {
+		fs.accessSync(target);
+		return true;
+	} catch(e) {
+		return false;
+	}
+}
+
 function Updater() {
 	this.state = {
 		promises: [],
@@ -17,7 +26,8 @@ function Updater() {
 		models_to_create: [],
 		unchanged_models: [],
 		delete_counter: 0,
-		hooks: []
+		hooks: {},
+		main_fields: {}
 	};
 }
 
@@ -44,21 +54,60 @@ Updater.prototype.checkIfModelsNeedUpdate = function(cb) {
 };
 
 Updater.prototype.createDataHooks = function(cb) {
-	var self = this;
+	var prevHooks = null,
+		self = this;
+
+	//console.log(this.state.main_fields);
+	// TODO: get prior data hooks from file, if it exists
+	// ----- delete old hooks that no longer have models
+	// ----- add old hooks still in use, and new hooks
+	if(exists(path.resolve('./core/models/hooks.js'))) {
+		prevHooks = fs.readFileSync(path.resolve('./core/models/hooks.js'), 'utf-8');
+		var beginPrevHooks = prevHooks.indexOf('/* begin */');
+		var endPrevHooks = prevHooks.indexOf('/* end */');
+
+		prevHooks = prevHooks.substring(beginPrevHooks + ('/* begin */').length, endPrevHooks).split('/* middle */').map(function(hook) {
+			return hook;
+		});
+	}
+
 	// Create hooks after models are made
-	var hooks = 'module.exports = function(mongoose) {\n\treturn {\n';
-	this.state.hooks.map(function(hook) {
-		hooks += '\t\t' + Object.keys(hook)[0] + ': require("./' + hook[Object.keys(hook)[0]] + '")(mongoose)';
-		if(self.state.hooks.indexOf(hook) === self.state.hooks.length - 1) hooks += '\n';
-		else hooks += ',\n';
-	});
-	hooks += '\t};\n};\n';
+	try {
+		var hooks = 'module.exports = function(mongoose) {\n\treturn {\n\t\t/* begin */\n';
 
-	fs.writeFile(path.resolve('./core/models/hooks.js'), hooks, 'utf-8', function(error) {
-		if(error) return cb(error);
+		if(prevHooks) {
+			prevHooks.map(function(hook) {
+				hook = hook.replace(/\s/gm, '');
+				var potMatch = hook.substring(0, hook.indexOf(':'));
+				potMatch = potMatch.lastIndexOf('s') === potMatch.length - 1 ? potMatch.substring(0, potMatch.length - 1) : potMatch;
 
-		process.exit();
-	});
+				if(self.state.unchanged_models.indexOf(potMatch) !== -1) {
+					self.state.hooks[hook.substring(0, hook.indexOf(':'))] = { model: hook.substring(hook.indexOf('(') + 4, hook.indexOf(')') - 1) };
+
+					self.state.main_fields[hook.substring(0, hook.indexOf(':'))] = hook.substring(hook.indexOf('main_field:') + ('main_field:').length + 1, hook.lastIndexOf('"'));
+				}
+			});
+		}
+
+		var i;
+		for(i = 0;i < Object.keys(self.state.hooks).length;i++) {
+			hooks += '\t\t' + Object.keys(self.state.hooks)[i] + ': {\n';
+			hooks += '\t\t\tmodel: require("./' + self.state.hooks[Object.keys(self.state.hooks)[i]].model + '")(mongoose),\n';
+			hooks += '\t\t\tmain_field: "' + self.state.main_fields[Object.keys(self.state.hooks)[i]] + '"\n';
+			hooks += '\t\t}';
+			if(i === Object.keys(self.state.hooks).length - 1) hooks += '\n';
+			else hooks += ',/* middle */\n';
+		}
+		hooks += '\t\t/* end */\n\t};\n};\n';
+	} catch(e) {
+		console.log(e);
+	} finally {
+		fs.writeFile(path.resolve('./core/models/hooks.js'), hooks, 'utf-8', function(error) {
+			if(error) return cb(error);
+
+			process.exit();
+		});
+	}
 };
 
 Updater.prototype.compareModels = function() {
@@ -112,7 +161,7 @@ Updater.prototype.deleteModels = function() {
 
 		try {
 			self.state.models_to_delete.map(function(model) {
-				if(self.state.unchanged_models.indexOf(model) === -1) fs.unlinkSync(path.resolve(path.join(modelDir, model + '.model.js')));
+				if(exists(path.resolve(path.join(modelDir, (model.charAt(0).toUpperCase() + model.slice(1)) + '.model.js'))) && self.state.unchanged_models.indexOf(model) === -1) fs.unlinkSync(path.resolve(path.join(modelDir, (model.charAt(0).toUpperCase() + model.slice(1)) + '.model.js')));
 			})
 		} catch(e) {
 			console.log(e);
@@ -213,6 +262,8 @@ Updater.prototype.buildModel = function(models, model, fields) {
 	var i;
 	for(i = 0;i < Object.keys(fields).length;i++) {
 		modelContent += ',\n\t\t' + Object.keys(fields)[i] + ': ' + (fields[Object.keys(fields)[i]].field_main ? '{ type: ' : '') + fields[Object.keys(fields)[i]].field_type + (fields[Object.keys(fields)[i]].field_main ? ', required: true }' : '');
+		
+		if(fields[Object.keys(fields)[i]].field_main) this.state.main_fields[model] = Object.keys(fields)[i];
 	}
 
 	modelContent += '\n\t});\n\n';
@@ -287,6 +338,8 @@ Updater.prototype.buildModel = function(models, model, fields) {
 	modelContent += '\treturn mongoose.model("' + mongooseModel + '", Schema);\n};\n';
 
 	fs.writeFileSync(path.resolve('./core/models/' + modelName), modelContent);
+
+	this.state.hooks[model] = { model: modelName };
 };
 
 Updater.prototype.promptUser = function(cb) {
@@ -327,16 +380,6 @@ Updater.prototype.getAllNewModels = function() {
 					});
 
 				self.state.all_new_models.push(models);
-
-				models.map(function(model) {
-					var modelName = (model.lastIndexOf('s') === model.length - 1) ? model.substring(0, model.length - 1) : model;
-					modelName = modelName.charAt(0).toUpperCase() + modelName.slice(1);
-					modelName += '.model.js';
-
-					var returnData = {};
-					returnData[model] = modelName;
-					self.state.hooks.push(returnData);
-				});
 			})
 		} catch(e) {
 			console.log(e);
@@ -351,7 +394,7 @@ Updater.prototype.getAllOldModels = function() {
 
 	return new Promise(function(resolve) {
 		var modelDir = path.resolve(path.join(__dirname, '../../../core/models'));
-		fs.existsSync(modelDir) || fs.mkdirSync(modelDir);
+		exists(modelDir) || fs.mkdirSync(modelDir);
 		fs.readdir(modelDir, function(error, models) {
 			if(error) console.log(error);
 

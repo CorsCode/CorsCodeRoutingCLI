@@ -45,3 +45,6 @@ corscode-init
 	- Fixed updater to prompt user for additional information
 - v1.2.1
 	- Changed main field for each model to be required instead of prefixed
+- v1.2.2
+	- Fixed main field assigner in updater
+	- Changed crudFunctions accordingly to send main field in request
